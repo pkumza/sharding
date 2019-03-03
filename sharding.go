@@ -36,7 +36,7 @@ func (a Algorithm) String() string {
 }
 
 const (
-	defaultDuplicas = 100
+	NumOfReplicas = 100
 )
 
 // Sharding :
@@ -59,7 +59,7 @@ func New(alg Algorithm, shardSize int, endpoints []string) *Sharding {
 	shardNum := len(endpoints) / shardSize
 	for i := 0; i < shardNum; i++ {
 		shardName := genShardName(i)
-		s.consistEps.Add(shardName, defaultDuplicas)
+		s.consistEps.Add(shardName, NumOfReplicas)
 		s.shards[shardName] = make([]string, 0)
 	}
 	s.consistEps.SortHashes()
@@ -74,15 +74,15 @@ func New(alg Algorithm, shardSize int, endpoints []string) *Sharding {
 	for shardName, endpoints := range s.shards {
 		switch alg {
 		case AlgConst:
-			s.consistInst.Add(shardName, defaultDuplicas)
+			s.consistInst.Add(shardName, NumOfReplicas)
 		case AlgLinear:
 			s.consistInst.Add(shardName, len(endpoints))
 		case AlgSqrt:
-			sqrt := int(math.Sqrt(float64(len(endpoints) * defaultDuplicas)))
+			sqrt := int(math.Sqrt(float64(len(endpoints) * NumOfReplicas)))
 			s.consistInst.Add(shardName, sqrt)
 		case AlgMixer:
-			if len(endpoints) > defaultDuplicas {
-				s.consistInst.Add(shardName, defaultDuplicas)
+			if len(endpoints) > NumOfReplicas {
+				s.consistInst.Add(shardName, NumOfReplicas)
 			} else {
 				s.consistInst.Add(shardName, len(endpoints))
 			}

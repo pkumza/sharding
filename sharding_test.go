@@ -14,7 +14,7 @@ const (
 	defaultEpsNum    = 7000
 	defaultInstNum   = 7000
 	defaultShardSize = 100
-	testLoop         = 200
+	testLoop         = 1
 )
 
 func Test_Sqrt(t *testing.T) {
