@@ -100,6 +100,12 @@ func (s *Sharding) Get(instName string) (endpoints []string) {
 	return s.shards[shardName]
 }
 
+// Get returns a list of endpoints
+func (s *Sharding) GetTwo(instName string) (endpoints []string, endpointsTwo []string) {
+	shardName, shardNameTwo, _ := s.consistInst.GetTwo(instName)
+	return s.shards[shardName], s.shards[shardNameTwo]
+}
+
 var (
 	alphaBeta = []byte("abcdefghijklmnopqrstuvwxyz")
 )
