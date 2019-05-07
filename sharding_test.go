@@ -13,7 +13,7 @@ import (
 const (
 	defaultEpsNum    = 7000
 	defaultInstNum   = 7000
-	defaultShardSize = 100
+	defaultShardSize = 50
 	testLoop         = 1
 )
 
@@ -33,19 +33,28 @@ func Test_Mixer(t *testing.T) {
 func testSharding(alg Algorithm) {
 	rand.Seed(time.Now().UnixNano())
 	loadRange := make(map[int]int)
+	endpoints := make([]string, defaultEpsNum)
 	for l := 0; l < testLoop; l++ {
-		endpoints := make([]string, defaultEpsNum)
 		epsLoad := make(map[string]float64)
-		for i := 0; i < defaultEpsNum; i++ {
-			epName := genEndpoint()
-			endpoints[i] = epName
-			epsLoad[epName] = 0.0
+		if l == 0 {
+			for i := 0; i < defaultEpsNum; i++ {
+				epName := genEndpoint()
+				endpoints[i] = epName
+				epsLoad[epName] = 0.0
+			}
+		} else {
+			for i := 0; i < defaultEpsNum; i++ {
+				epsLoad[endpoints[i]] = 0.0
+			}
 		}
 		s := New(alg, defaultShardSize, endpoints)
 		for i := 0; i < defaultInstNum; i++ {
-			eps := s.Get(genInstName())
+			eps, epsTwo := s.GetTwo(genInstName())
 			for _, ep := range eps {
-				epsLoad[ep] += 1.0 / float64(len(eps))
+				epsLoad[ep] += 1.0 / float64(len(eps)+len(epsTwo))
+			}
+			for _, ep := range epsTwo {
+				epsLoad[ep] += 1.0 / float64(len(eps)+len(epsTwo))
 			}
 		}
 		for _, load := range epsLoad {
@@ -56,7 +65,12 @@ func testSharding(alg Algorithm) {
 	if err != nil {
 		panic(err)
 	}
+	calculate, err := os.Create(fmt.Sprintf("slice_calculate_%v.out", alg))
+	if err != nil {
+		panic(err)
+	}
 	defer output.Close()
+	defer calculate.Close()
 	loadMax := 0
 	for load := range loadRange {
 		if load > loadMax {
@@ -66,8 +80,12 @@ func testSharding(alg Algorithm) {
 	for i := 0; i <= loadMax; i++ {
 		if loadRange[i] == 0 {
 			output.WriteString("\n")
+			calculate.WriteString("\n")
 		} else {
 			output.WriteString(strconv.Itoa(loadRange[i]) + "\n")
+			for a := 1; a <= loadRange[i]; a++ {
+				calculate.WriteString(strconv.Itoa(i) + "\n")
+			}
 		}
 	}
 }
