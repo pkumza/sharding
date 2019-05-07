@@ -18,12 +18,16 @@ const (
 	AlgLinear
 	// AlgMixer Const & Linear Weight
 	AlgMixer
+	// AlgSqrtSqrt Double Sqrt Weight
+	AlgSqrtSqrt
 )
 
 func (a Algorithm) String() string {
 	switch a {
 	case AlgSqrt:
 		return "sqrt"
+	case AlgSqrtSqrt:
+		return "sqrtsqrt"
 	case AlgConst:
 		return "const"
 	case AlgLinear:
@@ -36,6 +40,7 @@ func (a Algorithm) String() string {
 }
 
 const (
+	// NumOfReplicas is default replicas
 	NumOfReplicas = 100
 )
 
@@ -78,7 +83,10 @@ func New(alg Algorithm, shardSize int, endpoints []string) *Sharding {
 		case AlgLinear:
 			s.consistInst.Add(shardName, len(endpoints))
 		case AlgSqrt:
-			sqrt := int(math.Sqrt(float64(len(endpoints) * NumOfReplicas)))
+			sqrt := int(math.Sqrt(float64(len(endpoints))/100.0) * float64(NumOfReplicas))
+			s.consistInst.Add(shardName, sqrt)
+		case AlgSqrtSqrt:
+			sqrt := int(math.Sqrt(math.Sqrt(float64(len(endpoints))/100.0)) * float64(NumOfReplicas))
 			s.consistInst.Add(shardName, sqrt)
 		case AlgMixer:
 			if len(endpoints) > NumOfReplicas {

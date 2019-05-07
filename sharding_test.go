@@ -11,26 +11,27 @@ import (
 )
 
 const (
-	defaultEpsNum    = 7000
-	defaultInstNum   = 7000
-	defaultShardSize = 50
-	testLoop         = 1
+	defaultEpsNum   = 7000
+	defaultInstNum  = 7000
+	targetShardSize = 100
+	testLoop        = 1
 )
 
 func Test_Sqrt(t *testing.T) {
-	testSharding(AlgSqrt)
+	testSharding(AlgSqrt, 1)
 }
 func Test_Const(t *testing.T) {
-	testSharding(AlgConst)
-}
-func Test_Linear(t *testing.T) {
-	testSharding(AlgLinear)
-}
-func Test_Mixer(t *testing.T) {
-	testSharding(AlgMixer)
+	testSharding(AlgConst, 1)
 }
 
-func testSharding(alg Algorithm) {
+func Test_Const_Two(t *testing.T) {
+	testSharding(AlgConst, 2)
+}
+func Test_Sqrt_Two(t *testing.T) {
+	testSharding(AlgSqrtSqrt, 2)
+}
+
+func testSharding(alg Algorithm, getN int) {
 	rand.Seed(time.Now().UnixNano())
 	loadRange := make(map[int]int)
 	endpoints := make([]string, defaultEpsNum)
@@ -47,30 +48,33 @@ func testSharding(alg Algorithm) {
 				epsLoad[endpoints[i]] = 0.0
 			}
 		}
-		s := New(alg, defaultShardSize, endpoints)
+		s := New(alg, targetShardSize/getN, endpoints)
 		for i := 0; i < defaultInstNum; i++ {
-			eps, epsTwo := s.GetTwo(genInstName())
-			for _, ep := range eps {
-				epsLoad[ep] += 1.0 / float64(len(eps)+len(epsTwo))
-			}
-			for _, ep := range epsTwo {
-				epsLoad[ep] += 1.0 / float64(len(eps)+len(epsTwo))
+			switch getN {
+			case 1:
+				eps := s.Get(genInstName())
+				for _, ep := range eps {
+					epsLoad[ep] += 1.0 / float64(len(eps))
+				}
+			case 2:
+				eps, epsTwo := s.GetTwo(genInstName())
+				for _, ep := range eps {
+					epsLoad[ep] += 1.0 / float64(len(eps)+len(epsTwo))
+				}
+				for _, ep := range epsTwo {
+					epsLoad[ep] += 1.0 / float64(len(eps)+len(epsTwo))
+				}
 			}
 		}
 		for _, load := range epsLoad {
 			loadRange[int(math.Round(load/0.01))]++
 		}
 	}
-	output, err := os.Create(fmt.Sprintf("slice_%v.out", alg))
-	if err != nil {
-		panic(err)
-	}
-	calculate, err := os.Create(fmt.Sprintf("slice_calculate_%v.out", alg))
+	output, err := os.Create(fmt.Sprintf("slice_%d_%v.out", getN, alg))
 	if err != nil {
 		panic(err)
 	}
 	defer output.Close()
-	defer calculate.Close()
 	loadMax := 0
 	for load := range loadRange {
 		if load > loadMax {
@@ -80,12 +84,8 @@ func testSharding(alg Algorithm) {
 	for i := 0; i <= loadMax; i++ {
 		if loadRange[i] == 0 {
 			output.WriteString("\n")
-			calculate.WriteString("\n")
 		} else {
 			output.WriteString(strconv.Itoa(loadRange[i]) + "\n")
-			for a := 1; a <= loadRange[i]; a++ {
-				calculate.WriteString(strconv.Itoa(i) + "\n")
-			}
 		}
 	}
 }
